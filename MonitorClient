@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Скрипт для настройки Docker Compose с cAdvisor, Node Exporter и Portainer Agent
+
+echo "Создание файла docker-compose.yml..."
+
+# Создание файла docker-compose.yml
+cat <<EOF > docker-compose.yml
+version: '3.8'
+
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    restart: always
+    ports:
+      - "9100:9100"
+
+  portainer_agent:
+    image: portainer/agent:latest
+    container_name: portainer_agent
+    restart: always
+    ports:
+      - "9001:9001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+EOF
+
+echo "Файл docker-compose.yml создан."
+
+# Установка Docker Compose, если не установлен
+if ! command -v docker-compose &> /dev/null; then
+  echo "Установка Docker Compose..."
+  DOCKER_COMPOSE_VERSION="v2.26.1"
+  sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose
+  echo "Docker Compose установлен."
+else
+  echo "Docker Compose уже установлен."
+fi
+
+# Запуск Docker Compose
+echo "Запуск сервисов через Docker Compose..."
+docker-compose up -d
+
+echo "Сервисы успешно запущены через Docker Compose!"
